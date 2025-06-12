@@ -36,10 +36,11 @@ pipeline {
             }
         }
         stage('Deploy') {
+            agent {
+                label 'node-react'  // This will run the deployment on your Node-React agent
+            }
             steps {
-                sshagent(['node-react-credentials']) {
-                    sh "ssh -o StrictHostKeyChecking=no ubuntu@35.173.187.48 'cd /path/to/project && docker-compose pull && docker-compose up -d'"
-                }
+                sh 'cd /path/to/project && docker-compose pull && docker-compose up -d'
             }
         }
     }
