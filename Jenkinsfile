@@ -37,10 +37,14 @@ pipeline {
         }
         stage('Deploy') {
             agent {
-                label 'node-react'  // This will run the deployment on your Node-React agent
+                label 'node-react'  // Deploys on your Node-React agent
             }
             steps {
-                sh 'cd /path/to/project && docker-compose pull && docker-compose up -d'
+                sh '''
+                    cd /home/ubuntu/app  # Actual path to your project
+                    docker-compose pull
+                    docker-compose up -d
+                '''
             }
         }
     }
