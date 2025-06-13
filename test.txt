@@ -1,1 +1,2 @@
-testing pipeline automation.
+final testing of pipeline automation.
+
