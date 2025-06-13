@@ -1,22 +1,25 @@
 pipeline {
-    agent any
+    agent { label 'node-react-agent' }
 
     environment {
         DOCKER_REGISTRY = "docker.io"
         DEV_IMAGE = "iamkeerthana/dev:dev"
         PROD_IMAGE = "iamkeerthana/prod:prod"
-        AGENT_IP = "35.173.187.48"
-        SSH_CREDS = "ssh-credentials"
         DOCKER_CREDS = "docker-hub-credentials"
     }
 
     stages {
-        stage('Setup Image Tag') {
+        stage('Checkout Code') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Setup Image Tag') {
+            steps {
                 script {
                     def branch = env.GIT_BRANCH?.replace('origin/', '') ?: sh(
-                        script: "git rev-parse --abbrev-ref HEAD", 
+                        script: "git rev-parse --abbrev-ref HEAD",
                         returnStdout: true
                     ).trim()
 
@@ -36,7 +39,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh "docker build -t ${env.DOCKER_IMAGE} ."
-                sh "docker inspect ${env.DOCKER_IMAGE} >/dev/null || exit 1"
+                sh "docker image inspect ${env.DOCKER_IMAGE} > /dev/null"
             }
         }
 
@@ -48,29 +51,21 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker push ${DOCKER_IMAGE}
                     '''
                 }
             }
         }
 
-        stage('Deploy on Server') {
+        stage('Deploy App on Node') {
             steps {
-                withCredentials([sshUserPrivateKey(
-                    credentialsId: env.SSH_CREDS,
-                    usernameVariable: 'SSH_USER',
-                    keyFileVariable: 'SSH_KEY'
-                )]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no -i \$SSH_KEY \$SSH_USER@${AGENT_IP} \"
-                            docker pull ${DOCKER_IMAGE}
-                            docker stop react-app || true
-                            docker rm react-app || true
-                            docker run -d --name react-app -p 80:80 ${DOCKER_IMAGE}
-                        \"
-                    """
-                }
+                sh '''
+                    docker pull ${DOCKER_IMAGE}
+                    docker stop react-app || true
+                    docker rm react-app || true
+                    docker run -d --name react-app -p 80:80 ${DOCKER_IMAGE}
+                '''
             }
         }
     }
@@ -82,7 +77,7 @@ pipeline {
             cleanWs()
         }
         success {
-            echo "Successfully deployed ${env.DOCKER_IMAGE}"
+            echo "Successfully deployed ${env.DOCKER_IMAGE} on node-react-agent"
         }
         failure {
             echo "Deployment failed for ${env.DOCKER_IMAGE}"
