@@ -1,0 +1,11 @@
+groups:
+  - name: blackbox-alerts
+    rules:
+      - alert: ReactAppDown
+        expr: probe_success == 0
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: "React App is Down"
+          description: "The React app at http://35.173.187.48 is unreachable."
